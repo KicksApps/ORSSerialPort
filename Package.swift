@@ -1,13 +1,15 @@
-// swift-tools-version:5.0
-// The swift-tools-version declares the minimum version of Swift required to build this package.
+// swift-tools-version:5.9
+// swift-tools-version 5.3+ is required for platform-conditioned target dependencies.
 
 import PackageDescription
 
 let package = Package(
     name: "ORSSerialPort",
-	platforms: [
-		.macOS(.v10_10)
-	],
+    platforms: [
+        .macOS(.v10_13),
+        .iOS(.v13),
+        .macCatalyst(.v13)
+    ],
     products: [
         // Products define the executables and libraries produced by a package, and make them visible to other packages.
         .library(
@@ -16,17 +18,23 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        // .package(url: /* package url */, from: "1.0.0"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
-        // Targets can depend on other targets in this package, and on products in packages which this package depends on.
+        // The real implementation — only actually compiled for macOS and Mac Catalyst.
+        .target(
+            name: "ORSSerialImpl",
+            path: "Sources/ORSSerialImpl",
+            exclude: ["ORSSerialBuffer.h", "../Resources/Info.plist"],
+            cSettings: [.define("SWIFTPM")]
+        ),
+        // Thin umbrella target that the app links against. On iOS it pulls in nothing.
         .target(
             name: "ORSSerial",
-			path: "Sources",
-			exclude: ["ORSSerialBuffer.h", "Resources/Info.plist"],
-			cSettings: [ .define("SWIFTPM") ]
-		//	sources: ["Source/**/*.m"]
-		)
+            dependencies: [
+                .target(name: "ORSSerialImpl",
+                        condition: .when(platforms: [.macOS, .macCatalyst]))
+            ],
+            path: "Sources/ORSSerial",
+        )
     ]
 )
